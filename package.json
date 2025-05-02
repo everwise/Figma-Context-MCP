@@ -1,35 +1,37 @@
 {
   "name": "figma-developer-mcp",
-  "version": "0.1.7",
+  "version": "0.2.1",
   "description": "Model Context Protocol server for Figma integration",
+  "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "figma-developer-mcp": "./dist/cli.js"
+    "figma-developer-mcp": "dist/cli.js"
   },
   "files": [
     "dist",
     "README.md"
   ],
   "scripts": {
-    "build": "tsc && tsc-alias",
+    "build": "tsup --dts",
     "type-check": "tsc --noEmit",
-    "start": "node dist/index.js",
-    "start:cli": "cross-env NODE_ENV=cli node dist/index.js",
-    "start:http": "node dist/index.js",
-    "dev": "cross-env NODE_ENV=development tsx watch src/index.ts",
-    "dev:cli": "cross-env NODE_ENV=development tsx watch src/index.ts --stdio",
+    "test": "jest",
+    "start": "node dist/cli.js",
+    "start:cli": "cross-env NODE_ENV=cli node dist/cli.js",
+    "start:http": "node dist/cli.js",
+    "dev": "cross-env NODE_ENV=development tsup --watch",
+    "dev:cli": "cross-env NODE_ENV=development tsup --watch -- --stdio",
     "lint": "eslint . --ext .ts",
     "format": "prettier --write \"src/**/*.ts\"",
     "inspect": "pnpx @modelcontextprotocol/inspector",
-    "prepare": "pnpm run build && chmod +x ./dist/cli.js",
+    "prepack": "pnpm build",
     "pub:release": "pnpm build && npm publish"
   },
   "engines": {
-    "node": "^20.17.0"
+    "node": ">=18.0.0"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/GLips/Figma-Context-MCP.git"
+    "url": "git+https://github.com/GLips/Figma-Context-MCP.git"
   },
   "keywords": [
     "figma",
@@ -39,20 +41,21 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.6.1",
+    "@figma/rest-api-spec": "^0.24.0",
+    "@modelcontextprotocol/sdk": "^1.10.2",
     "@types/yargs": "^17.0.33",
-    "axios": "^1.7.9",
     "cross-env": "^7.0.3",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "js-yaml": "^4.1.0",
     "remeda": "^2.20.1",
     "yargs": "^17.7.2",
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@figma/rest-api-spec": "^0.24.0",
     "@types/express": "^5.0.0",
-    "@types/jest": "^29.5.11",
+    "@types/jest": "^29.5.14",
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.17.0",
     "@typescript-eslint/eslint-plugin": "^8.24.0",
     "@typescript-eslint/parser": "^8.24.0",
@@ -61,14 +64,8 @@
     "jest": "^29.7.0",
     "prettier": "^3.5.0",
     "ts-jest": "^29.2.5",
-    "tsc-alias": "^1.8.10",
+    "tsup": "^8.4.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"
-  },
-  "pnpm": {
-    "overrides": {
-      "figma-mcp": "link:",
-      "figma-developer-mcp": "link:"
-    }
   }
 }
