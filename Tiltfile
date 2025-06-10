@@ -13,7 +13,7 @@ local('bash tilt/install.sh')
 local_resource(
     'figma-mcp',
     cmd='tilt/frontend_install.sh',
-    serve_cmd=run_with_nvm('pnpm run dev --port=3333'),
+    serve_cmd=run_with_nvm('PORT=3333 pnpm run dev'),
     allow_parallel=True,
     deps=['package.json', 'package.lock', 'tilt/frontend_install.sh'],
     labels=['figma-mcp'],
