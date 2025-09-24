@@ -1,15 +1,7 @@
 import fs from "fs";
 import path from "path";
 
-import type { Paint, RGBA } from "@figma/rest-api-spec";
-import { CSSHexColor, CSSRGBAColor, SimplifiedFill } from "~/services/simplify-node-response.js";
-
 export type StyleId = `${string}_${string}` & { __brand: "StyleId" };
-
-export interface ColorValue {
-  hex: CSSHexColor;
-  opacity: number;
-}
 
 /**
  * Download Figma image and save it locally
@@ -63,13 +55,17 @@ export async function downloadFigmaImage(
             }
             writer.write(value);
           }
-          resolve(fullPath);
         } catch (err) {
           writer.end();
           fs.unlink(fullPath, () => {});
           reject(err);
         }
       };
+
+      // Resolve only when the stream is fully written
+      writer.on("finish", () => {
+        resolve(fullPath);
+      });
 
       writer.on("error", (err) => {
         reader.cancel();
@@ -126,70 +122,6 @@ export function removeEmptyKeys<T>(input: T): T {
   }
 
   return result;
-}
-
-/**
- * Convert hex color value and opacity to rgba format
- * @param hex - Hexadecimal color value (e.g., "#FF0000" or "#F00")
- * @param opacity - Opacity value (0-1)
- * @returns Color string in rgba format
- */
-export function hexToRgba(hex: string, opacity: number = 1): string {
-  // Remove possible # prefix
-  hex = hex.replace("#", "");
-
-  // Handle shorthand hex values (e.g., #FFF)
-  if (hex.length === 3) {
-    hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
-  }
-
-  // Convert hex to RGB values
-  const r = parseInt(hex.substring(0, 2), 16);
-  const g = parseInt(hex.substring(2, 4), 16);
-  const b = parseInt(hex.substring(4, 6), 16);
-
-  // Ensure opacity is in the 0-1 range
-  const validOpacity = Math.min(Math.max(opacity, 0), 1);
-
-  return `rgba(${r}, ${g}, ${b}, ${validOpacity})`;
-}
-
-/**
- * Convert color from RGBA to { hex, opacity }
- *
- * @param color - The color to convert, including alpha channel
- * @param opacity - The opacity of the color, if not included in alpha channel
- * @returns The converted color
- **/
-export function convertColor(color: RGBA, opacity = 1): ColorValue {
-  const r = Math.round(color.r * 255);
-  const g = Math.round(color.g * 255);
-  const b = Math.round(color.b * 255);
-
-  // Alpha channel defaults to 1. If opacity and alpha are both and < 1, their effects are multiplicative
-  const a = Math.round(opacity * color.a * 100) / 100;
-
-  const hex = ("#" +
-    ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase()) as CSSHexColor;
-
-  return { hex, opacity: a };
-}
-
-/**
- * Convert color from Figma RGBA to rgba(#, #, #, #) CSS format
- *
- * @param color - The color to convert, including alpha channel
- * @param opacity - The opacity of the color, if not included in alpha channel
- * @returns The converted color
- **/
-export function formatRGBAColor(color: RGBA, opacity = 1): CSSRGBAColor {
-  const r = Math.round(color.r * 255);
-  const g = Math.round(color.g * 255);
-  const b = Math.round(color.b * 255);
-  // Alpha channel defaults to 1. If opacity and alpha are both and < 1, their effects are multiplicative
-  const a = Math.round(opacity * color.a * 100) / 100;
-
-  return `rgba(${r}, ${g}, ${b}, ${a})`;
 }
 
 /**
@@ -262,49 +194,23 @@ export function generateCSSShorthand(
 }
 
 /**
- * Convert a Figma paint (solid, image, gradient) to a SimplifiedFill
- * @param raw - The Figma paint to convert
- * @returns The converted SimplifiedFill
- */
-export function parsePaint(raw: Paint): SimplifiedFill {
-  if (raw.type === "IMAGE") {
-    return {
-      type: "IMAGE",
-      imageRef: raw.imageRef,
-      scaleMode: raw.scaleMode,
-    };
-  } else if (raw.type === "SOLID") {
-    // treat as SOLID
-    const { hex, opacity } = convertColor(raw.color!, raw.opacity);
-    if (opacity === 1) {
-      return hex;
-    } else {
-      return formatRGBAColor(raw.color!, opacity);
-    }
-  } else if (
-    ["GRADIENT_LINEAR", "GRADIENT_RADIAL", "GRADIENT_ANGULAR", "GRADIENT_DIAMOND"].includes(
-      raw.type,
-    )
-  ) {
-    // treat as GRADIENT_LINEAR
-    return {
-      type: raw.type,
-      gradientHandlePositions: raw.gradientHandlePositions,
-      gradientStops: raw.gradientStops.map(({ position, color }) => ({
-        position,
-        color: convertColor(color),
-      })),
-    };
-  } else {
-    throw new Error(`Unknown paint type: ${raw.type}`);
-  }
-}
-
-/**
  * Check if an element is visible
  * @param element - The item to check
  * @returns True if the item is visible, false otherwise
  */
 export function isVisible(element: { visible?: boolean }): boolean {
   return element.visible ?? true;
+}
+
+/**
+ * Rounds a number to two decimal places, suitable for pixel value processing.
+ * @param num The number to be rounded.
+ * @returns The rounded number with two decimal places.
+ * @throws TypeError If the input is not a valid number
+ */
+export function pixelRound(num: number): number {
+  if (isNaN(num)) {
+    throw new TypeError(`Input must be a valid number`);
+  }
+  return Number(Number(num).toFixed(2));
 }

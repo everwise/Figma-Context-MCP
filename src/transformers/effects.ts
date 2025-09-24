@@ -1,16 +1,17 @@
-import {
+import type {
   DropShadowEffect,
   InnerShadowEffect,
   BlurEffect,
   Node as FigmaDocumentNode,
 } from "@figma/rest-api-spec";
-import { formatRGBAColor } from "~/utils/common.js";
+import { formatRGBAColor } from "~/transformers/style.js";
 import { hasValue } from "~/utils/identity.js";
 
 export type SimplifiedEffects = {
   boxShadow?: string;
   filter?: string;
   backdropFilter?: string;
+  textShadow?: string;
 };
 
 export function buildSimplifiedEffects(n: FigmaDocumentNode): SimplifiedEffects {
@@ -42,7 +43,14 @@ export function buildSimplifiedEffects(n: FigmaDocumentNode): SimplifiedEffects 
     .join(" ");
 
   const result: SimplifiedEffects = {};
-  if (boxShadow) result.boxShadow = boxShadow;
+
+  if (boxShadow) {
+    if (n.type === "TEXT") {
+      result.textShadow = boxShadow;
+    } else {
+      result.boxShadow = boxShadow;
+    }
+  }
   if (filterBlurValues) result.filter = filterBlurValues;
   if (backdropFilterValues) result.backdropFilter = backdropFilterValues;
 

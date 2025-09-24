@@ -1,10 +1,10 @@
-import { isFrame, isLayout, isRectangle } from "~/utils/identity.js";
+import { isInAutoLayoutFlow, isFrame, isLayout, isRectangle } from "~/utils/identity.js";
 import type {
   Node as FigmaDocumentNode,
   HasFramePropertiesTrait,
   HasLayoutTrait,
 } from "@figma/rest-api-spec";
-import { generateCSSShorthand } from "~/utils/common.js";
+import { generateCSSShorthand, pixelRound } from "~/utils/common.js";
 
 export interface SimplifiedLayout {
   mode: "none" | "row" | "column";
@@ -207,31 +207,35 @@ function buildSimplifiedLayoutValues(
   };
 
   // Only include positioning-related properties if parent layout isn't flex or if the node is absolute
-  if (isFrame(parent) && (parent?.layoutMode === "NONE" || n.layoutPositioning === "ABSOLUTE")) {
+  if (
+    // If parent is a frame but not an AutoLayout, or if the node is absolute, include positioning-related properties
+    isFrame(parent) &&
+    !isInAutoLayoutFlow(n, parent)
+  ) {
     if (n.layoutPositioning === "ABSOLUTE") {
       layoutValues.position = "absolute";
     }
     if (n.absoluteBoundingBox && parent.absoluteBoundingBox) {
       layoutValues.locationRelativeToParent = {
-        x: n.absoluteBoundingBox.x - (parent?.absoluteBoundingBox?.x ?? n.absoluteBoundingBox.x),
-        y: n.absoluteBoundingBox.y - (parent?.absoluteBoundingBox?.y ?? n.absoluteBoundingBox.y),
+        x: pixelRound(n.absoluteBoundingBox.x - parent.absoluteBoundingBox.x),
+        y: pixelRound(n.absoluteBoundingBox.y - parent.absoluteBoundingBox.y),
       };
     }
-    return layoutValues;
   }
 
   // Handle dimensions based on layout growth and alignment
-  if (isRectangle("absoluteBoundingBox", n) && isRectangle("absoluteBoundingBox", parent)) {
+  if (isRectangle("absoluteBoundingBox", n)) {
     const dimensions: { width?: number; height?: number; aspectRatio?: number } = {};
 
     // Only include dimensions that aren't meant to stretch
     if (mode === "row") {
+      // AutoLayout row, only include dimensions if the node is not growing
       if (!n.layoutGrow && n.layoutSizingHorizontal == "FIXED")
         dimensions.width = n.absoluteBoundingBox.width;
       if (n.layoutAlign !== "STRETCH" && n.layoutSizingVertical == "FIXED")
         dimensions.height = n.absoluteBoundingBox.height;
     } else if (mode === "column") {
-      // column
+      // AutoLayout column, only include dimensions if the node is not growing
       if (n.layoutAlign !== "STRETCH" && n.layoutSizingHorizontal == "FIXED")
         dimensions.width = n.absoluteBoundingBox.width;
       if (!n.layoutGrow && n.layoutSizingVertical == "FIXED")
@@ -240,9 +244,23 @@ function buildSimplifiedLayoutValues(
       if (n.preserveRatio) {
         dimensions.aspectRatio = n.absoluteBoundingBox?.width / n.absoluteBoundingBox?.height;
       }
+    } else {
+      // Node is not an AutoLayout. Include dimensions if the node is not growing (which it should never be)
+      if (!n.layoutSizingHorizontal || n.layoutSizingHorizontal === "FIXED") {
+        dimensions.width = n.absoluteBoundingBox.width;
+      }
+      if (!n.layoutSizingVertical || n.layoutSizingVertical === "FIXED") {
+        dimensions.height = n.absoluteBoundingBox.height;
+      }
     }
 
     if (Object.keys(dimensions).length > 0) {
+      if (dimensions.width) {
+        dimensions.width = pixelRound(dimensions.width);
+      }
+      if (dimensions.height) {
+        dimensions.height = pixelRound(dimensions.height);
+      }
       layoutValues.dimensions = dimensions;
     }
   }

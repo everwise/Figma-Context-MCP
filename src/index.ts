@@ -1,15 +1,29 @@
 // Re-export the server and its types
-export { FigmaMcpServer } from "./mcp.js";
-export type { SimplifiedDesign } from "./services/simplify-node-response.js";
+export { createServer } from "./mcp/index.js";
+export type { SimplifiedDesign } from "./extractors/types.js";
 export type { FigmaService } from "./services/figma.js";
 export { getServerConfig } from "./config.js";
 export { startServer } from "./cli.js";
 
-export const Logger = {
-  log: (...args: any[]) => {
-    console.error("[INFO]", ...args);
-  },
-  error: (...args: any[]) => {
-    console.error("[ERROR]", ...args);
-  },
-};
+// Flexible extractor system
+export type {
+  ExtractorFn,
+  TraversalContext,
+  TraversalOptions,
+  GlobalVars,
+  StyleTypes,
+} from "./extractors/index.js";
+
+export {
+  extractFromDesign,
+  simplifyRawFigmaObject,
+  layoutExtractor,
+  textExtractor,
+  visualsExtractor,
+  componentExtractor,
+  allExtractors,
+  layoutAndText,
+  contentOnly,
+  visualsOnly,
+  layoutOnly,
+} from "./extractors/index.js";

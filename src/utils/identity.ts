@@ -5,7 +5,7 @@ import type {
   HasFramePropertiesTrait,
 } from "@figma/rest-api-spec";
 import { isTruthy } from "remeda";
-import { CSSHexColor, CSSRGBAColor } from "~/services/simplify-node-response.js";
+import type { CSSHexColor, CSSRGBAColor } from "~/transformers/style.js";
 
 export { isTruthy };
 
@@ -40,6 +40,25 @@ export function isLayout(val: unknown): val is HasLayoutTrait {
     "y" in val.absoluteBoundingBox &&
     "width" in val.absoluteBoundingBox &&
     "height" in val.absoluteBoundingBox
+  );
+}
+
+/**
+ * Checks if:
+ * 1. A node is a child to an auto layout frame
+ * 2. The child adheres to the auto layout rules—i.e. it's not absolutely positioned
+ *
+ * @param node - The node to check.
+ * @param parent - The parent node.
+ * @returns True if the node is a child of an auto layout frame, false otherwise.
+ */
+export function isInAutoLayoutFlow(node: unknown, parent: unknown): boolean {
+  const autoLayoutModes = ["HORIZONTAL", "VERTICAL"];
+  return (
+    isFrame(parent) &&
+    autoLayoutModes.includes(parent.layoutMode ?? "NONE") &&
+    isLayout(node) &&
+    node.layoutPositioning !== "ABSOLUTE"
   );
 }
 

@@ -5,10 +5,7 @@ import { config } from "dotenv";
 import { resolve } from "path";
 import { getServerConfig } from "./config.js";
 import { startHttpServer } from "./server.js";
-import { FigmaMcpServer } from "./mcp.js";
-
-// Load .env from the current working directory
-config({ path: resolve(process.cwd(), ".env") });
+import { createServer } from "./mcp/index.js";
 
 export async function startServer(): Promise<void> {
   // Check if we're running in stdio mode (e.g., via CLI)
@@ -16,7 +13,11 @@ export async function startServer(): Promise<void> {
 
   const config = getServerConfig(isStdioMode);
 
-  const server = new FigmaMcpServer(config.figmaApiKey);
+  const server = createServer(config.auth, {
+    isHTTP: !isStdioMode,
+    outputFormat: config.outputFormat,
+    skipImageDownloads: config.skipImageDownloads,
+  });
 
   if (isStdioMode) {
     const transport = new StdioServerTransport();
@@ -29,6 +30,9 @@ export async function startServer(): Promise<void> {
 
 // If we're being executed directly (not imported), start the server
 if (process.argv[1]) {
+  // Load .env from the current working directory
+  config({ path: resolve(process.cwd(), ".env") });
+
   startServer().catch((error) => {
     console.error("Failed to start server:", error);
     process.exit(1);
